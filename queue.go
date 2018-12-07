@@ -21,12 +21,10 @@ func (q *Queue) Enqueue(m *Message) error {
 
 	m.CreatedAt = &now
 
-	tx := db.MustBegin()
-
-	if _, err := tx.Exec(`INSERT INTO message (body, expire) VALUES (?, ?)`, m.Body, m.Expire); err != nil {
+	if _, err := db.Exec(`INSERT INTO message (body, expire) VALUES (?, ?)`, m.Body, m.Expire); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
 }
 
 func (q *Queue) Dequeue() (*Message, error) {
@@ -35,7 +33,6 @@ func (q *Queue) Dequeue() (*Message, error) {
 	hash := fmt.Sprintf("%X", sha256.Sum256([]byte(strconv.Itoa(rand.Int()))))
 
 	ret := &Message{}
-	//SELECT * FROM message ORDER BY id LIMIT 1
 	if _, err := tx.Exec(`UPDATE
 			message
 		SET
@@ -45,15 +42,15 @@ func (q *Queue) Dequeue() (*Message, error) {
 		return nil, err
 	}
 
-	if err := tx.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
-		return nil, err
-	}
-
-	if _, err := tx.Exec(`DELETE FROM message where id = ?`, ret.ID); err != nil {
-		return nil, err
-	}
-
 	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	if err := db.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
+		return nil, err
+	}
+
+	if _, err := db.Exec(`DELETE FROM message where id = ?`, ret.ID); err != nil {
 		return nil, err
 	}
 
