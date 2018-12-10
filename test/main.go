@@ -9,11 +9,12 @@ import (
 	valve "github.com/ieee0824/valveMQ"
 )
 
-const TEST_NUM = 2048
+const TEST_NUM = 10
 
 func main() {
 	log.SetFlags(log.Llongfile)
 	q := &valve.Queue{}
+	q.SetLimit(50)
 	enqStart := time.Now()
 	for i := 0; i < TEST_NUM; i++ {
 		q.Enqueue(&valve.Message{
@@ -73,6 +74,8 @@ func main() {
 		}
 	}
 
+	fmt.Println(a)
+	fmt.Println(b)
 	fmt.Println(cnt)
 
 }

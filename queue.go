@@ -2,6 +2,7 @@ package valve
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -14,6 +15,11 @@ func init() {
 
 type Queue struct {
 	setting Setting
+	bdqt    time.Time
+}
+
+func (q *Queue) SetLimit(n uint) {
+	q.setting.Limit = limit(n)
 }
 
 func (q *Queue) Enqueue(m *Message) error {
@@ -28,6 +34,10 @@ func (q *Queue) Enqueue(m *Message) error {
 }
 
 func (q *Queue) Dequeue() (*Message, error) {
+	now := time.Now()
+	if now.Sub(q.bdqt) < q.setting.Limit.DqSpan() {
+		return nil, errors.New("It took band limitation.")
+	}
 	tx := db.MustBegin()
 
 	hash := fmt.Sprintf("%X", sha256.Sum256([]byte(strconv.Itoa(rand.Int()))))
@@ -54,5 +64,6 @@ func (q *Queue) Dequeue() (*Message, error) {
 		return nil, err
 	}
 
+	q.bdqt = now
 	return ret, nil
 }
