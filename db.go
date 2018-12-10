@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/jmoiron/sqlx"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var db *sqlx.DB

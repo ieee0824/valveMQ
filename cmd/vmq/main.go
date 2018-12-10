@@ -5,9 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ieee0824/valveMQ"
-
 	"github.com/gin-gonic/gin"
+	"github.com/ieee0824/valveMQ"
 )
 
 func main() {
