@@ -6,6 +6,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
+	// use mysql driver
 	_ "github.com/go-sql-driver/mysql"
 )
 
