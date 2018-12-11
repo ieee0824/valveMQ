@@ -14,8 +14,16 @@ func init() {
 }
 
 type Queue struct {
-	setting Setting
-	bdqt    time.Time
+	setting  Setting
+	limitter *Log
+}
+
+func NewQueue() *Queue {
+	return &Queue{
+		limitter: &Log{
+			LastDequeueTime: time.Date(0, 0, 0, 0, 0, 0, 0, time.Local),
+		},
+	}
 }
 
 func (q *Queue) SetLimit(n uint) {
@@ -34,8 +42,14 @@ func (q *Queue) Enqueue(m *Message) error {
 }
 
 func (q *Queue) Dequeue() (*Message, error) {
+	if err := q.limitter.Block(); err != nil {
+		return nil, err
+	}
 	now := time.Now()
-	if now.Sub(q.bdqt) < q.setting.Limit.DqSpan() {
+	if now.Sub(q.limitter.LastDequeueTime) < q.setting.Limit.DqSpan() {
+		if err := q.limitter.Nop(); err != nil {
+			return nil, err
+		}
 		return nil, errors.New("It took band limitation.")
 	}
 	tx := db.MustBegin()
@@ -49,10 +63,12 @@ func (q *Queue) Dequeue() (*Message, error) {
 			flag = 1,
 			hash = ?
 		WHERE flag = 0 ORDER BY id LIMIT 1`, hash); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -64,6 +80,8 @@ func (q *Queue) Dequeue() (*Message, error) {
 		return nil, err
 	}
 
-	q.bdqt = now
+	if err := q.limitter.Free(); err != nil {
+		return nil, err
+	}
 	return ret, nil
 }

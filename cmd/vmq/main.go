@@ -11,7 +11,7 @@ import (
 
 func main() {
 	r := gin.Default()
-	q := &valve.Queue{}
+	q := valve.NewQueue()
 
 	r.POST("/enqueue", func(ctx *gin.Context) {
 		msg := &valve.Message{}
