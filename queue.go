@@ -73,10 +73,16 @@ func (q *Queue) Dequeue() (*Message, error) {
 	}
 
 	if err := db.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
+		if err := q.limitter.Nop(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 
 	if _, err := db.Exec(`DELETE FROM message where id = ?`, ret.ID); err != nil {
+		if err := q.limitter.Nop(); err != nil {
+			return nil, err
+		}
 		return nil, err
 	}
 

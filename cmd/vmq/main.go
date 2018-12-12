@@ -6,10 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ieee0824/valveMQ"
+	valve "github.com/ieee0824/valveMQ"
 )
 
 func main() {
+	log.SetFlags(log.Llongfile)
 	r := gin.Default()
 	q := valve.NewQueue()
 
