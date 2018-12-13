@@ -38,21 +38,39 @@ func (a *apiConfig) new() {
 	}
 }
 
+type queueConfig struct {
+	DequeueLimit uint `json:"dequeue_limit"`
+}
+
+func (q *queueConfig) new() {
+}
+
 type Config struct {
 	dbConfig
 	apiConfig
+	queueConfig
 }
 
 func NewConfig(cfgFileName ...string) *Config {
 	ret := &Config{}
-	if len(cfgFileName) != 0 {
-		f, err := os.Open(cfgFileName[0])
+	for _, name := range cfgFileName {
+		f, err := os.Open(name)
 		if err == nil {
 			json.NewDecoder(f).Decode(ret)
+			f.Close()
+			break
 		}
 	}
 	ret.dbConfig.new()
 	ret.dbConfig.new()
+	ret.queueConfig.new()
 
 	return ret
+}
+
+func GetConfigPath() []string {
+	return []string{
+		"/etc/vmq.cnf",
+		"./vmq.cnf",
+	}
 }

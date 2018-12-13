@@ -17,6 +17,8 @@ func main() {
 	r := gin.Default()
 	q := valve.NewQueue()
 	cfg := valve.NewConfig()
+	q.SetLimit(cfg.DequeueLimit)
+
 	if err := valve.DBInit(cfg); err != nil {
 		log.Fatalln(err)
 	}
