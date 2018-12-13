@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	_ "github.com/go-sql-driver/mysql"
 	valve "github.com/ieee0824/valveMQ"
 )
 
@@ -13,6 +16,10 @@ func main() {
 	log.SetFlags(log.Llongfile)
 	r := gin.Default()
 	q := valve.NewQueue()
+	cfg := valve.NewConfig()
+	if err := valve.DBInit(cfg); err != nil {
+		log.Fatalln(err)
+	}
 
 	r.POST("/enqueue", func(ctx *gin.Context) {
 		msg := &valve.Message{}
@@ -42,7 +49,7 @@ func main() {
 		ctx.JSON(http.StatusOK, msg)
 	})
 
-	if err := r.Run(); err != nil {
+	if err := r.Run(fmt.Sprintf(":%s", cfg.APIPort)); err != nil {
 		log.Fatalln(err)
 	}
 }
