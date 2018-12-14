@@ -62,7 +62,7 @@ func NewConfig(cfgFileName ...string) *Config {
 		}
 	}
 	ret.dbConfig.new()
-	ret.dbConfig.new()
+	ret.apiConfig.new()
 	ret.queueConfig.new()
 
 	return ret
