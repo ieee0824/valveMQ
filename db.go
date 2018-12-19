@@ -40,7 +40,7 @@ func DBInit(cfg *Config) error {
 		return err
 	}
 	if n == 0 {
-		_, err := tx.Exec("INSERT INTO log (id, hash) VALUES (1, \"\")")
+		_, err := tx.Exec("INSERT INTO log (id, hash, last_dequeue_time) VALUES (1, \"\", NOW())")
 		if err != nil {
 			return err
 		}
