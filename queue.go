@@ -42,17 +42,17 @@ func (q *Queue) Enqueue(m *Message) error {
 }
 
 func (q *Queue) Dequeue() (*Message, error) {
-	if err := q.limitter.Block(); err != nil {
+	tx := db.MustBegin()
+	defer tx.Commit()
+	ok, err := q.limitter.Block(q.setting.Limit)
+	if err != nil {
+		q.limitter.Nop()
 		return nil, err
 	}
-	now := time.Now()
-	if now.Sub(q.limitter.LastDequeueTime) < q.setting.Limit.DqSpan() {
-		if err := q.limitter.Nop(); err != nil {
-			return nil, err
-		}
-		return nil, errors.New("It took band limitation.")
+	if !ok {
+		q.limitter.Nop()
+		return nil, errors.New("limit")
 	}
-	tx := db.MustBegin()
 
 	hash := fmt.Sprintf("%X", sha256.Sum256([]byte(strconv.Itoa(rand.Int()))))
 
@@ -63,31 +63,23 @@ func (q *Queue) Dequeue() (*Message, error) {
 			flag = 1,
 			hash = ?
 		WHERE flag = 0 ORDER BY id LIMIT 1`, hash); err != nil {
+		q.limitter.Nop()
 		tx.Rollback()
 		return nil, err
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := tx.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
+		q.limitter.Nop()
 		tx.Rollback()
 		return nil, err
 	}
 
-	if err := db.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
-		if err := q.limitter.Nop(); err != nil {
-			return nil, err
-		}
+	if _, err := tx.Exec(`DELETE FROM message where id = ?`, ret.ID); err != nil {
+		q.limitter.Nop()
+		tx.Rollback()
 		return nil, err
 	}
 
-	if _, err := db.Exec(`DELETE FROM message where id = ?`, ret.ID); err != nil {
-		if err := q.limitter.Nop(); err != nil {
-			return nil, err
-		}
-		return nil, err
-	}
-
-	if err := q.limitter.Free(); err != nil {
-		return nil, err
-	}
+	q.limitter.Free()
 	return ret, nil
 }
