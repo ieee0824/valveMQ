@@ -31,7 +31,7 @@ func DBInit(cfg *Config) error {
 		return err
 	}
 
-	if _, err := tx.Exec("CREATE TABLE IF NOT EXISTS `log` (`id` int(11) unsigned NOT NULL AUTO_INCREMENT, `last_dequeue_time` timestamp(6) NOT NULL DEFAULT '1980-01-01 00:00:00.000000', `hash` varchar(512) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"); err != nil {
+	if _, err := tx.Exec("CREATE TABLE IF NOT EXISTS `log` (`id` int(11) unsigned NOT NULL AUTO_INCREMENT, `last_dequeue_time` timestamp(4) NOT NULL DEFAULT '1980-01-01 00:00:00.0000', `hash` varchar(512) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;"); err != nil {
 		return err
 	}
 

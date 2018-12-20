@@ -3,7 +3,6 @@ package valve
 import (
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -21,16 +20,19 @@ func (l *Log) GetHash() string {
 }
 
 func (l *Log) Block(lim limit) (bool, error) {
+	tx := db.MustBegin()
 	l.m.Lock()
+	defer tx.Commit()
 	defer l.m.Unlock()
+
 	if l.hash != "" {
 		return false, nil
 	}
-	tx := db.MustBegin()
-	defer tx.Commit()
+
 	hash := fmt.Sprintf("%X", sha256.Sum256([]byte(strconv.Itoa(rand.Int()))))
 
 	//fmt.Println(fmt.Sprintf("00:00:%02f", float64(lim.DqSpan()/time.Millisecond)/1000))
+	//fmt.Println(int64(lim.DqSpan() / time.Millisecond))
 	if _, err := tx.Exec(`
 	UPDATE
 		log
@@ -39,9 +41,9 @@ func (l *Log) Block(lim limit) (bool, error) {
 	WHERE 
 		id = 1
 	AND
-		? < TIMEDIFF(NOW(6), last_dequeue_time)
+		? < ROUND(UNIX_TIMESTAMP(NOW(4)) * 1000) - ROUND(UNIX_TIMESTAMP(last_dequeue_time) * 1000)
 	AND
-		hash = ""`, hash, fmt.Sprintf("00:00:%02f", float64(lim.DqSpan()/time.Millisecond)/1000)); err != nil {
+		hash = ""`, hash, int64(lim.DqSpan()/time.Millisecond)); err != nil {
 		tx.Rollback()
 		return false, err
 	}
@@ -57,13 +59,17 @@ func (l *Log) Block(lim limit) (bool, error) {
 }
 
 func (l *Log) Nop() error {
+	tx := db.MustBegin()
 	l.m.Lock()
-	defer l.m.Unlock()
+	defer func() {
+		tx.Commit()
+		l.m.Unlock()
+	}()
+
 	if l.hash == "" {
 		return nil
 	}
-	tx := db.MustBegin()
-	defer tx.Commit()
+
 	if _, err := tx.Exec(`
 	UPDATE
 		log
@@ -78,23 +84,23 @@ func (l *Log) Nop() error {
 }
 
 func (l *Log) Free() error {
+	tx := db.MustBegin()
 	l.m.Lock()
-	defer l.m.Unlock()
+
+	defer func() {
+		tx.Commit()
+		l.m.Unlock()
+	}()
+
 	if l.hash == "" {
 		return nil
 	}
-	tx := db.MustBegin()
-	defer func() {
-		err := tx.Commit()
-		if err != nil {
-			log.Println(err)
-		}
-	}()
+
 	if _, err := tx.Exec(`
 	UPDATE
 		log
 	SET
-		last_dequeue_time = NOW(6),
+		last_dequeue_time = NOW(4),
 		hash = ?
 	WHERE hash = ?`, "", l.hash); err != nil {
 		tx.Rollback()

@@ -80,6 +80,5 @@ func (q *Queue) Dequeue() (*Message, error) {
 		return nil, err
 	}
 
-	q.limitter.Free()
-	return ret, nil
+	return ret, q.limitter.Free()
 }
