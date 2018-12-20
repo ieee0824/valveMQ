@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -42,13 +43,31 @@ func main() {
 	})
 
 	r.GET("/dequeue", func(ctx *gin.Context) {
-		msg, err := q.Dequeue()
-		if err != nil {
-			log.Println(err)
-			ctx.JSON(http.StatusNotFound, nil)
-			return
+		cancel := time.NewTicker(30 * time.Second)
+		interval := time.NewTicker(100 * time.Millisecond)
+		defer cancel.Stop()
+		defer interval.Stop()
+		for {
+			select {
+			case <-cancel.C:
+				ctx.JSON(http.StatusNotFound, nil)
+				return
+			case <-interval.C:
+				msg, err := q.Dequeue()
+				if err != nil {
+					if err.Error() != "limit" &&
+						err.Error() != "sql: no rows in result set" {
+						log.Println(err)
+						ctx.JSON(http.StatusNotFound, nil)
+						return
+					}
+				} else {
+					ctx.JSON(http.StatusOK, msg)
+					return
+				}
+			}
 		}
-		ctx.JSON(http.StatusOK, msg)
+
 	})
 
 	if err := r.Run(fmt.Sprintf(":%s", cfg.APIPort)); err != nil {
