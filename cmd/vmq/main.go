@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +14,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	valve "github.com/ieee0824/valveMQ"
 )
+
+func sha256Sum(data string) string {
+	bytes := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(bytes[:])
+}
 
 func main() {
 	log.SetFlags(log.Llongfile)
@@ -34,12 +41,14 @@ func main() {
 			return
 		}
 
+		msg.RequestID = sha256Sum(msg.Body + fmt.Sprintf("%d", time.Now().UnixNano()))
+
 		if err := q.Enqueue(msg); err != nil {
 			log.Println(err)
 			ctx.JSON(http.StatusInternalServerError, nil)
 			return
 		}
-		ctx.JSON(http.StatusOK, true)
+		ctx.JSON(http.StatusOK, msg.RequestID)
 	})
 
 	r.GET("/dequeue", func(ctx *gin.Context) {
