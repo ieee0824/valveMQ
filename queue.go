@@ -35,7 +35,7 @@ func (q *Queue) Enqueue(m *Message) error {
 
 	m.CreatedAt = &now
 
-	if _, err := db.Exec(`INSERT INTO message (body, expire) VALUES (?, ?)`, m.Body, m.Expire); err != nil {
+	if _, err := db.Exec(`INSERT INTO message (body, expire, request_id) VALUES (?, ?, ?)`, m.Body, m.Expire, m.RequestID); err != nil {
 		return err
 	}
 	return nil
@@ -68,7 +68,7 @@ func (q *Queue) Dequeue() (*Message, error) {
 		return nil, err
 	}
 
-	if err := tx.Get(ret, `SELECT id, body, created_at FROM message WHERE hash = ?`, hash); err != nil {
+	if err := tx.Get(ret, `SELECT id, body, created_at, request_id FROM message WHERE hash = ?`, hash); err != nil {
 		q.limitter.Nop()
 		tx.Rollback()
 		return nil, err

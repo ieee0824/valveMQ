@@ -7,4 +7,5 @@ type Message struct {
 	Body      string     `json:"body" db:"body"`
 	CreatedAt *time.Time `json:"created_at" db:"created_at"`
 	Expire    *time.Time `json:"expire" db:"expire"`
+	RequestID string     `json:"request_id" db:"request_id"`
 }
